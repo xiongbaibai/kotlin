@@ -5,9 +5,7 @@
 
 package org.jetbrains.kotlin.gradle.scripting.internal
 
-import org.gradle.api.DefaultTask
-import org.gradle.api.Plugin
-import org.gradle.api.Project
+import org.gradle.api.*
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.plugins.JavaPluginConvention
 import org.gradle.api.tasks.*
@@ -17,6 +15,8 @@ import org.jetbrains.kotlin.gradle.plugin.*
 import org.jetbrains.kotlin.gradle.scripting.ScriptingExtension
 import org.jetbrains.kotlin.gradle.tasks.GradleMessageCollector
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.tasks.registerTask
+import org.jetbrains.kotlin.gradle.tasks.useLazyTaskConfiguration
 import org.jetbrains.kotlin.script.KotlinScriptDefinition
 import org.jetbrains.kotlin.scripting.compiler.plugin.ScriptDefinitionsFromClasspathDiscoverySource
 import kotlin.properties.Delegates
@@ -44,22 +44,28 @@ class ScriptingGradleSubplugin : Plugin<Project> {
             val javaPluginConvention = project.convention.findPlugin(JavaPluginConvention::class.java)
             if (javaPluginConvention?.sourceSets?.isEmpty() == false) {
 
-                project.tasks.withType(KotlinCompile::class.java) { task ->
+                var configureAction: (KotlinCompile) -> (Unit) = { task ->
                     if (task !is KaptGenerateStubsTask) {
                         javaPluginConvention.sourceSets.findByName(task.sourceSetName)?.let { sourceSet ->
-                            project.tasks.create(
-                                "discover${task.sourceSetName.capitalize()}ScriptsExtensions",
+                            val extensionsTask = registerTask(
+                                project, "discover${task.sourceSetName.capitalize()}ScriptsExtensions",
                                 DiscoverScriptExtensionsTask::class.java
                             ) { extensionsTask ->
                                 extensionsTask.sourceSet = sourceSet
                                 extensionsTask.discoveryClasspathConfiguration =
                                         project.configurations.findByName(getConfigurationName(task.sourceSetName))
                                 extensionsTask.kotlinCompile = task
-                                task.dependsOn(extensionsTask)
                             }
+                            task.dependsOn(extensionsTask.getTaskOrProvider())
                         }
                     }
                 }
+                if (useLazyTaskConfiguration) {
+                    project.tasks.withType(KotlinCompile::class.java).configureEach(configureAction)
+                } else {
+                    project.tasks.withType(KotlinCompile::class.java, configureAction)
+                }
+
             } else {
                 project.logger.warn("kotlin scripting plugin: applied to a non-JVM project $project")
             }
