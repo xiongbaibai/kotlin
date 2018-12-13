@@ -17,6 +17,7 @@
 package org.jetbrains.kotlin.contracts
 
 import org.jetbrains.kotlin.contracts.model.ESExpressionVisitor
+import org.jetbrains.kotlin.contracts.model.ESReceiver
 import org.jetbrains.kotlin.contracts.model.ESValue
 import org.jetbrains.kotlin.contracts.model.structure.ESVariable
 import org.jetbrains.kotlin.descriptors.ValueDescriptor
@@ -24,7 +25,7 @@ import org.jetbrains.kotlin.psi.KtLambdaExpression
 import org.jetbrains.kotlin.resolve.calls.smartcasts.DataFlowValue
 import org.jetbrains.kotlin.resolve.scopes.receivers.ReceiverValue
 
-class ESDataFlowValue(descriptor: ValueDescriptor, val dataFlowValue: DataFlowValue) : ESVariable(descriptor) {
+open class ESDataFlowValue(descriptor: ValueDescriptor, val dataFlowValue: DataFlowValue) : ESVariable(descriptor) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -46,3 +47,9 @@ class ESLambda(val lambda: KtLambdaExpression, val receiverValue: ReceiverValue?
         throw IllegalStateException("Lambdas shouldn't be visited by ESExpressionVisitor")
     }
 }
+
+class ESDataFlowReceiver(receiverValue: ReceiverValue, val dataFlowValue: DataFlowValue) : ESReceiver(receiverValue)
+
+// TODO: rename maybe
+class ESDataFlowValueWithExpressionReceiver(val receiver: ReceiverValue, descriptor: ValueDescriptor, dataFlowValue: DataFlowValue) :
+    ESDataFlowValue(descriptor, dataFlowValue)
