@@ -5,6 +5,8 @@ extra["versions.appcode"] = "191.1411"
 extra["versions.appcode.repo"] = "ijplatform_master_CIDR_AppCode_Installers"
 extra["versions.clion"] = "183.4588.63"
 extra["versions.clion.repo"] = "ijplatform_IjPlatform183_Cidr_CLion_PublicInstallers"
+extra["versions.kotlin.native"] = "1.1-dev-4961"
+extra["versions.kotlin.native.repo"] = "Kotlin_KotlinNative_Master_KotlinNativeDist"
 //extra["versions.androidStudioRelease"] = "3.1.0.5"
 //extra["versions.androidStudioBuild"] = "173.4506631"
 
