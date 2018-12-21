@@ -53,7 +53,7 @@ class EffectSystem(val languageVersionSettings: LanguageVersionSettings, val dat
 
         val resultContextInfo = getContextInfoWhen(ESReturns(ESConstant.wildcard(module.builtIns)), callExpression, bindingTrace, module)
 
-        return resultContextInfo.toDataFlowInfo(languageVersionSettings)
+        return resultContextInfo.toDataFlowInfo(languageVersionSettings, module.builtIns)
     }
 
     fun getDataFlowInfoWhenEquals(
@@ -77,8 +77,8 @@ class EffectSystem(val languageVersionSettings: LanguageVersionSettings, val dat
         val notEqualsContextInfo = InfoCollector(ESReturns(ESConstant.falseValue(builtIns)), builtIns).collectFromSchema(effects)
 
         return ConditionalDataFlowInfo(
-            equalsContextInfo.toDataFlowInfo(languageVersionSettings),
-            notEqualsContextInfo.toDataFlowInfo(languageVersionSettings)
+            equalsContextInfo.toDataFlowInfo(languageVersionSettings, builtIns),
+            notEqualsContextInfo.toDataFlowInfo(languageVersionSettings, builtIns)
         )
     }
 
@@ -109,7 +109,7 @@ class EffectSystem(val languageVersionSettings: LanguageVersionSettings, val dat
         return getContextInfoWhen(
             ESReturns(ESConstant.booleanValue(value, moduleDescriptor.builtIns)),
             condition, bindingTrace, moduleDescriptor
-        ).toDataFlowInfo(languageVersionSettings)
+        ).toDataFlowInfo(languageVersionSettings, moduleDescriptor.builtIns)
     }
 
     private fun getContextInfoWhen(

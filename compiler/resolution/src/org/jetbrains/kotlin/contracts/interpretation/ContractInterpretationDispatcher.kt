@@ -55,7 +55,7 @@ class ContractInterpretationDispatcher(internal val module: ModuleDescriptor) {
             }
         }
 
-        return SubstitutingFunctor(resultingClauses, contractDescription.ownerFunction)
+        return SubstitutingFunctor(resultingClauses, contractDescription.ownerFunction, module.builtIns)
     }
 
     internal fun interpretEffect(effectDeclaration: EffectDeclaration): ESEffect? {
