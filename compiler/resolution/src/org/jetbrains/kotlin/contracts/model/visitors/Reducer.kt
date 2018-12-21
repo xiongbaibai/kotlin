@@ -16,6 +16,7 @@
 
 package org.jetbrains.kotlin.contracts.model.visitors
 
+import org.jetbrains.kotlin.contracts.description.expressions.BooleanConstantReference
 import org.jetbrains.kotlin.contracts.model.*
 import org.jetbrains.kotlin.contracts.model.structure.*
 import org.jetbrains.kotlin.types.typeUtil.isSubtypeOf
@@ -36,10 +37,12 @@ class Reducer : ESExpressionVisitor<ESExpression?> {
                 val reducedCondition = effect.condition.accept(this) ?: return null
 
                 // Filter never executed conditions
-                if (reducedCondition is ESConstant && reducedCondition == ESConstant.FALSE) return null
+                if (reducedCondition is ESConstant && reducedCondition.constantReference == BooleanConstantReference.FALSE)
+                    return null
 
                 // Add always firing effects
-                if (reducedCondition is ESConstant && reducedCondition == ESConstant.TRUE) return effect.simpleEffect
+                if (reducedCondition is ESConstant && reducedCondition.constantReference == BooleanConstantReference.TRUE)
+                    return effect.simpleEffect
 
                 // Leave everything else as is
                 return effect
@@ -98,11 +101,11 @@ class Reducer : ESExpressionVisitor<ESExpression?> {
     override fun visitNot(not: ESNot): ESExpression? {
         val reducedArg = not.arg.accept(this) ?: return null
 
-        return when (reducedArg) {
-            ESConstant.TRUE -> ESConstant.FALSE
-            ESConstant.FALSE -> ESConstant.TRUE
-            else -> reducedArg
+        if (reducedArg is ESConstant && reducedArg.isBooleanConstant()) {
+            return reducedArg.negate()
         }
+
+        return reducedArg
     }
 
     override fun visitVariable(esVariable: ESVariable): ESVariable = esVariable

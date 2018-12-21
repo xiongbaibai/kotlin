@@ -18,6 +18,7 @@ package org.jetbrains.kotlin.contracts
 
 import org.jetbrains.kotlin.builtins.DefaultBuiltIns
 import org.jetbrains.kotlin.config.LanguageVersionSettings
+import org.jetbrains.kotlin.contracts.description.expressions.ConstantReference
 import org.jetbrains.kotlin.contracts.model.ESValue
 import org.jetbrains.kotlin.contracts.model.MutableContextInfo
 import org.jetbrains.kotlin.contracts.model.structure.ESConstant
@@ -60,7 +61,9 @@ inline private fun <D> extractDataFlowStatements(dictionary: Map<ESValue, Set<D>
 
 private fun ESValue.toDataFlowValue(): DataFlowValue? = when (this) {
     is ESDataFlowValue -> dataFlowValue
-    ESConstant.NULL -> DataFlowValue.nullValue(DefaultBuiltIns.Instance)
-    is ESConstant -> DataFlowValue(IdentifierInfo.NO, type)
+    is ESConstant -> when (constantReference) {
+        ConstantReference.NULL -> DataFlowValue.nullValue(DefaultBuiltIns.Instance)
+        else -> DataFlowValue(IdentifierInfo.NO, type)
+    }
     else -> null
 }
