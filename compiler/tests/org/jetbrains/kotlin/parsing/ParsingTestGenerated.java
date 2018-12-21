@@ -2173,6 +2173,16 @@ public class ParsingTestGenerated extends AbstractParsingTest {
                 runTest("compiler/testData/psi/recovery/ValueParameterNoTypeRecovery.kt");
             }
 
+            @TestMetadata("valueParameterRecovery.kt")
+            public void testValueParameterRecovery() throws Exception {
+                runTest("compiler/testData/psi/recovery/valueParameterRecovery.kt");
+            }
+
+            @TestMetadata("valueParameterRecoveryWithTypes.kt")
+            public void testValueParameterRecoveryWithTypes() throws Exception {
+                runTest("compiler/testData/psi/recovery/valueParameterRecoveryWithTypes.kt");
+            }
+
             @TestMetadata("WhenWithoutBraces.kt")
             public void testWhenWithoutBraces() throws Exception {
                 runTest("compiler/testData/psi/recovery/WhenWithoutBraces.kt");
