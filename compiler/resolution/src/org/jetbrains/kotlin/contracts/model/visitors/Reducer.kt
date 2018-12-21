@@ -25,7 +25,7 @@ import org.jetbrains.kotlin.types.typeUtil.isSubtypeOf
  * Reduces given list of effects by evaluating constant expressions,
  * throwing away senseless checks and infeasible clauses, etc.
  */
-class Reducer : ESExpressionVisitor<ESExpression?> {
+class Reducer(private val constants: ESConstants) : ESExpressionVisitor<ESExpression?> {
     fun reduceEffects(schema: List<ESEffect>): List<ESEffect> =
         schema.mapNotNull { reduceEffect(it) }
 
@@ -62,16 +62,16 @@ class Reducer : ESExpressionVisitor<ESExpression?> {
         // Result is unknown, do not evaluate
         result ?: return ESIs(reducedArg, isOperator.functor)
 
-        return result.xor(isOperator.functor.isNegated).lift()
+        return constants.booleanValue(result.xor(isOperator.functor.isNegated))
     }
 
     override fun visitEqual(equal: ESEqual): ESExpression {
         val reducedLeft = equal.left.accept(this) as ESValue
         val reducedRight = equal.right
 
-        if (reducedLeft is ESConstant) return (reducedLeft == reducedRight).xor(equal.functor.isNegated).lift()
+        if (reducedLeft is ESConstant) return constants.booleanValue((reducedLeft == reducedRight).xor(equal.functor.isNegated))
 
-        return ESEqual(reducedLeft, reducedRight, equal.functor.isNegated)
+        return ESEqual(constants, reducedLeft, reducedRight, equal.functor.isNegated)
     }
 
     override fun visitAnd(and: ESAnd): ESExpression? {
@@ -82,7 +82,7 @@ class Reducer : ESExpressionVisitor<ESExpression?> {
             reducedLeft.isFalse || reducedRight.isFalse -> reducedLeft
             reducedLeft.isTrue -> reducedRight
             reducedRight.isTrue -> reducedLeft
-            else -> ESAnd(reducedLeft, reducedRight)
+            else -> ESAnd(constants, reducedLeft, reducedRight)
         }
     }
 
@@ -94,7 +94,7 @@ class Reducer : ESExpressionVisitor<ESExpression?> {
             reducedLeft.isTrue || reducedRight.isTrue -> reducedLeft
             reducedLeft.isFalse -> reducedRight
             reducedRight.isFalse -> reducedLeft
-            else -> ESOr(reducedLeft, reducedRight)
+            else -> ESOr(constants, reducedLeft, reducedRight)
         }
     }
 
