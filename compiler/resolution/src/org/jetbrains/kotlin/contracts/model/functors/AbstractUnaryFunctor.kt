@@ -19,7 +19,7 @@ package org.jetbrains.kotlin.contracts.model.functors
 import org.jetbrains.kotlin.contracts.model.Computation
 import org.jetbrains.kotlin.contracts.model.ConditionalEffect
 import org.jetbrains.kotlin.contracts.model.ESEffect
-import org.jetbrains.kotlin.contracts.model.structure.ESReturns
+import org.jetbrains.kotlin.contracts.model.structure.isReturns
 import org.jetbrains.kotlin.contracts.model.structure.isWildcard
 
 /**
@@ -40,10 +40,10 @@ abstract class AbstractUnaryFunctor : AbstractReducingFunctor() {
         val rest = mutableListOf<ESEffect>()
 
         for (effect in arg.effects) {
-            if (effect !is ConditionalEffect || effect.simpleEffect !is ESReturns || effect.simpleEffect.value.isWildcard)
-                rest += effect
-            else
+            if (effect is ConditionalEffect && effect.simpleEffect.isReturns { !value.isWildcard })
                 returning += effect
+            else
+                rest += effect
         }
 
         val evaluatedByFunctor = invokeWithReturningEffects(returning)
@@ -53,5 +53,3 @@ abstract class AbstractUnaryFunctor : AbstractReducingFunctor() {
 
     protected abstract fun invokeWithReturningEffects(list: List<ConditionalEffect>): List<ConditionalEffect>
 }
-
-

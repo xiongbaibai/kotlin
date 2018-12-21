@@ -16,11 +16,11 @@
 
 package org.jetbrains.kotlin.contracts.model.functors
 
-import org.jetbrains.kotlin.contracts.model.structure.ESReturns
-import org.jetbrains.kotlin.contracts.model.structure.ESConstant
+import org.jetbrains.kotlin.contracts.model.Computation
 import org.jetbrains.kotlin.contracts.model.ConditionalEffect
 import org.jetbrains.kotlin.contracts.model.ESEffect
-import org.jetbrains.kotlin.contracts.model.Computation
+import org.jetbrains.kotlin.contracts.model.structure.ESConstant
+import org.jetbrains.kotlin.contracts.model.structure.isReturns
 import org.jetbrains.kotlin.contracts.model.structure.isWildcard
 
 abstract class AbstractBinaryFunctor : AbstractReducingFunctor() {
@@ -38,17 +38,17 @@ abstract class AbstractBinaryFunctor : AbstractReducingFunctor() {
         val rightValueReturning = mutableListOf<ConditionalEffect>()
 
         left.effects.forEach {
-            if (it !is ConditionalEffect || it.simpleEffect !is ESReturns || it.simpleEffect.value.isWildcard)
-                nonInterestingEffects += it
-            else
+            if (it is ConditionalEffect && it.simpleEffect.isReturns { !value.isWildcard })
                 leftValueReturning += it
+            else
+                nonInterestingEffects += it
         }
 
         right.effects.forEach {
-            if (it !is ConditionalEffect || it.simpleEffect !is ESReturns || it.simpleEffect.value.isWildcard)
-                nonInterestingEffects += it
-            else
+            if (it is ConditionalEffect && it.simpleEffect.isReturns { !value.isWildcard })
                 rightValueReturning += it
+            else
+                nonInterestingEffects += it
         }
 
         val evaluatedByFunctor = invokeWithReturningEffects(leftValueReturning, rightValueReturning)
