@@ -20,6 +20,7 @@ import org.jetbrains.kotlin.builtins.DefaultBuiltIns
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
 import org.jetbrains.kotlin.contracts.description.expressions.BooleanConstantReference
 import org.jetbrains.kotlin.contracts.description.expressions.ConstantReference
+import org.jetbrains.kotlin.contracts.model.ESExpression
 import org.jetbrains.kotlin.contracts.model.ESExpressionVisitor
 import org.jetbrains.kotlin.contracts.model.ESValue
 import org.jetbrains.kotlin.descriptors.ValueDescriptor
@@ -94,8 +95,14 @@ class ESConstant private constructor(val constantReference: ConstantReference, o
 fun Boolean.lift(): ESConstant =
     ESConstant.booleanValue(this, DefaultBuiltIns.Instance)
 
-val ESValue.constantReference: ConstantReference?
+val ESExpression.constantReference: ConstantReference?
     get() = (this as? ESConstant)?.constantReference
+
+internal val ESExpression.isTrue: Boolean
+    get() = constantReference == BooleanConstantReference.TRUE
+
+internal val ESExpression.isFalse: Boolean
+    get() = constantReference == BooleanConstantReference.FALSE
 
 internal val ESValue.isWildcard: Boolean
     get() = constantReference == ConstantReference.WILDCARD

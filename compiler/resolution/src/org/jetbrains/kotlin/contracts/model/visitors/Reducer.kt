@@ -79,9 +79,9 @@ class Reducer : ESExpressionVisitor<ESExpression?> {
         val reducedRight = and.right.accept(this) ?: return null
 
         return when {
-            reducedLeft == false.lift() || reducedRight == false.lift() -> false.lift()
-            reducedLeft == true.lift() -> reducedRight
-            reducedRight == true.lift() -> reducedLeft
+            reducedLeft.isFalse || reducedRight.isFalse -> reducedLeft
+            reducedLeft.isTrue -> reducedRight
+            reducedRight.isTrue -> reducedLeft
             else -> ESAnd(reducedLeft, reducedRight)
         }
     }
@@ -91,9 +91,9 @@ class Reducer : ESExpressionVisitor<ESExpression?> {
         val reducedRight = or.right.accept(this) ?: return null
 
         return when {
-            reducedLeft == true.lift() || reducedRight == true.lift() -> true.lift()
-            reducedLeft == false.lift() -> reducedRight
-            reducedRight == false.lift() -> reducedLeft
+            reducedLeft.isTrue || reducedRight.isTrue -> reducedLeft
+            reducedLeft.isFalse -> reducedRight
+            reducedRight.isFalse -> reducedLeft
             else -> ESOr(reducedLeft, reducedRight)
         }
     }
