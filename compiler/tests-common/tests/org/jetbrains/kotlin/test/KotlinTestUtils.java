@@ -8,6 +8,7 @@ package org.jetbrains.kotlin.test;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.intellij.openapi.Disposable;
+import com.intellij.openapi.editor.Caret;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
@@ -634,8 +635,17 @@ public class KotlinTestUtils {
     }
 
     public static void assertEqualsToFile(@NotNull File expectedFile, @NotNull Editor editor) {
-        String actualText = editor.getDocument().getText();
-        String afterText = new StringBuilder(actualText).insert(editor.getCaretModel().getOffset(), "<caret>").toString();
+        Caret caret = editor.getCaretModel().getCurrentCaret();
+        int selectionStart = caret.getSelectionStart();
+        int selectionEnd = caret.getSelectionEnd();
+
+        String afterText = TagsTestDataUtil.insertTagsInText(
+                Lists.<TagsTestDataUtil.TagInfo>newArrayList(
+                        new TagsTestDataUtil.TagInfo<>(caret.getOffset(), true, "caret"),
+                        new TagsTestDataUtil.TagInfo<>(selectionStart, true, "selection"),
+                        new TagsTestDataUtil.TagInfo<>(selectionEnd, false, "selection")),
+                editor.getDocument().getText()
+        );
 
         assertEqualsToFile(expectedFile, afterText);
     }
@@ -788,14 +798,10 @@ public class KotlinTestUtils {
 
         if (isDirectiveDefined(expectedText, "WITH_COROUTINES")) {
             M supportModule = hasModules ? factory.createModule("support", Collections.emptyList(), Collections.emptyList()) : null;
-            if (coroutinesPackage.isEmpty()) {
-                coroutinesPackage = "kotlin.coroutines.experimental";
-            }
 
             boolean isReleaseCoroutines =
-                    !coroutinesPackage.contains("experimental") ||
-                    isDirectiveDefined(expectedText, "LANGUAGE_VERSION: 1.3") ||
-                    isDirectiveDefined(expectedText, "!LANGUAGE: +ReleaseCoroutines");
+                    !coroutinesPackage.contains("experimental") &&
+                    !isDirectiveDefined(expectedText, "!LANGUAGE: -ReleaseCoroutines");
 
             testFiles.add(factory.createFile(supportModule,
                                              "CoroutineUtil.kt",
@@ -836,16 +842,11 @@ public class KotlinTestUtils {
     public static Map<String, String> parseDirectives(String expectedText) {
         Map<String, String> directives = new HashMap<>();
         Matcher directiveMatcher = DIRECTIVE_PATTERN.matcher(expectedText);
-        int start = 0;
         while (directiveMatcher.find()) {
-            if (directiveMatcher.start() != start) {
-                Assert.fail("Directives should only occur at the beginning of a file: " + directiveMatcher.group());
-            }
             String name = directiveMatcher.group(1);
             String value = directiveMatcher.group(3);
             String oldValue = directives.put(name, value);
             Assert.assertNull("Directive overwritten: " + name + " old value: " + oldValue + " new value: " + value, oldValue);
-            start = directiveMatcher.end() + 1;
         }
         return directives;
     }

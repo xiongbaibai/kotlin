@@ -46,7 +46,7 @@ fun findScriptDefinition(file: VirtualFile, project: Project): KotlinScriptDefin
     if (file.isDirectory ||
         file.extension == KotlinFileType.EXTENSION ||
         file.extension == JavaClassFileType.INSTANCE.defaultExtension ||
-        FileTypeRegistry.getInstance().getFileTypeByFileName(file.name) != KotlinFileType.INSTANCE
+        !isKotlinFileType(file)
     ) {
         return null
     }
@@ -65,6 +65,12 @@ fun findScriptDefinition(file: VirtualFile, project: Project): KotlinScriptDefin
     }
 
     return scriptDefinitionProvider.findScriptDefinition(file.name)
+}
+
+private fun isKotlinFileType(file: VirtualFile): Boolean {
+    val typeRegistry = FileTypeRegistry.getInstance()
+    return typeRegistry.getFileTypeByFile(file) == KotlinFileType.INSTANCE ||
+            typeRegistry.getFileTypeByFileName(file.name) == KotlinFileType.INSTANCE
 }
 
 abstract class LazyScriptDefinitionProvider : ScriptDefinitionProvider {
@@ -121,11 +127,18 @@ private class CachingSequence<T>(from: Sequence<T>) : Sequence<T> {
 
         private var cacheCursor = 0
 
-        override fun hasNext(): Boolean = lock.read { cacheCursor < cache.size || sequenceIterator.hasNext() }
+        override fun hasNext(): Boolean =
+            lock.read { cacheCursor < cache.size } || lock.write { cacheCursor < cache.size || sequenceIterator.hasNext() }
 
-        override fun next(): T = lock.write {
-            if (cacheCursor < cache.size) cache[cacheCursor++]
-            else sequenceIterator.next().also { cache.add(it) }
+        override fun next(): T {
+            lock.read {
+                if (cacheCursor < cache.size) return cache[cacheCursor++]
+            }
+            // lock.write is not an upgrade but retake, therefore - one more check needed
+            lock.write {
+                return if (cacheCursor < cache.size) cache[cacheCursor++]
+                else sequenceIterator.next().also { cache.add(it) }
+            }
         }
     }
 

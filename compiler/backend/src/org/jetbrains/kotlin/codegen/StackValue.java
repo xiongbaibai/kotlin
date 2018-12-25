@@ -477,7 +477,7 @@ public abstract class StackValue {
 
         Type resultType = KotlinTypeMapper.mapUnderlyingTypeOfInlineClassType(targetInlineClassType);
 
-        if (TypeUtils.isNullableType(targetInlineClassType) && !isPrimitive(type)) {
+        if (TypeUtils.isNullableType(targetInlineClassType) && !isPrimitive(resultType)) {
             boxOrUnboxWithNullCheck(v, vv -> invokeUnboxMethod(vv, owner, resultType));
         }
         else {
@@ -885,6 +885,7 @@ public abstract class StackValue {
         // 2) call using callable reference: in this case it is not local, but rather captured value
         // 3) recursive call: we are in the middle of defining it, but, thankfully, we can simply call `this.invoke` to
         // create new coroutine
+        // 4) Normal call, but the value is captured
 
         // First, check whether this is a normal call
         int index = codegen.lookupLocalIndex(callee);
@@ -898,24 +899,27 @@ public abstract class StackValue {
         Type calleeType = CodegenBinding.asmTypeForAnonymousClass(bindingContext, callee);
         if (codegen.context.hasThisDescriptor()) {
             ClassDescriptor thisDescriptor = codegen.context.getThisDescriptor();
+            ClassDescriptor classDescriptor = bindingContext.get(CLASS_FOR_CALLABLE, callee);
             if (thisDescriptor instanceof SyntheticClassDescriptorForLambda &&
                 ((SyntheticClassDescriptorForLambda) thisDescriptor).isCallableReference()) {
                 // Call is inside a callable reference
                 // if it is call to recursive local, just return this$0
                 Boolean isRecursive = bindingContext.get(RECURSIVE_SUSPEND_CALLABLE_REFERENCE, thisDescriptor);
                 if (isRecursive != null && isRecursive) {
-                    ClassDescriptor classDescriptor =
-                            bindingContext.get(CLASS_FOR_CALLABLE, callee);
                     assert classDescriptor != null : "No CLASS_FOR_CALLABLE" + callee;
                     return thisOrOuter(codegen, classDescriptor, false, false);
                 }
                 // Otherwise, just call constructor of the closure
                 return codegen.findCapturedValue(callee);
             }
+            if (classDescriptor == thisDescriptor) {
+                // Recursive suspend local function, just call invoke on this, it will create new coroutine automatically
+                codegen.v.visitVarInsn(ALOAD, 0);
+                return onStack(calleeType);
+            }
         }
-        // Recursive suspend local function, just call invoke on this, it will create new coroutine automatically
-        codegen.v.visitVarInsn(ALOAD, 0);
-        return onStack(calleeType);
+        // Otherwise, this is captured value
+        return codegen.findCapturedValue(callee);
     }
 
     private static StackValue platformStaticCallIfPresent(@NotNull StackValue resultReceiver, @NotNull CallableDescriptor descriptor) {
@@ -1660,8 +1664,14 @@ public abstract class StackValue {
 
                 v.visitFieldInsn(isStaticPut ? GETSTATIC : GETFIELD,
                                  backingFieldOwner.getInternalName(), fieldName, this.type.getDescriptor());
-                if (!skipLateinitAssertion) {
-                    genNotNullAssertionForLateInitIfNeeded(v);
+                if (!skipLateinitAssertion && descriptor.isLateInit()) {
+                    CallableMemberDescriptor contextDescriptor = codegen.context.getContextDescriptor();
+                    boolean isCompanionAccessor =
+                            contextDescriptor instanceof AccessorForPropertyBackingField &&
+                            ((AccessorForPropertyBackingField) contextDescriptor).getAccessorKind() == AccessorKind.IN_CLASS_COMPANION;
+                    if (!isCompanionAccessor) {
+                        genNonNullAssertForLateinit(v, this.descriptor.getName().asString());
+                    }
                 }
                 coerceTo(type, kotlinType, v);
             }
@@ -1693,6 +1703,19 @@ public abstract class StackValue {
                 }
 
                 coerce(typeOfValueOnStack, kotlinTypeOfValueOnStack, type, kotlinType, v);
+
+                // For non-private lateinit properties in companion object, the assertion is generated in the public getFoo method
+                // in the companion and _not_ in the synthetic accessor access$getFoo$cp in the outer class. The reason is that this way,
+                // the synthetic accessor can be reused for isInitialized checks, which require there to be no assertion.
+                // For lateinit properties that are accessed via the backing field directly (or via the synthetic accessor, if the access
+                // is from a different context), the assertion will be generated on each access, see KT-28331.
+                if (descriptor instanceof AccessorForPropertyBackingField) {
+                    PropertyDescriptor property = ((AccessorForPropertyBackingField) descriptor).getCalleeDescriptor();
+                    if (!skipLateinitAssertion && property.isLateInit() && JvmAbi.isPropertyWithBackingFieldInOuterClass(property) &&
+                        !JvmCodegenUtil.couldUseDirectAccessToProperty(property, true, false, codegen.context, false)) {
+                        genNonNullAssertForLateinit(v, property.getName().asString());
+                    }
+                }
 
                 KotlinType returnType = descriptor.getReturnType();
                 if (returnType != null && KotlinBuiltIns.isNothing(returnType)) {
@@ -1730,12 +1753,6 @@ public abstract class StackValue {
             StackValue.constant(value, this.type, this.kotlinType).putSelector(type, kotlinType, v);
 
             return true;
-        }
-
-        private void genNotNullAssertionForLateInitIfNeeded(@NotNull InstructionAdapter v) {
-            if (!descriptor.isLateInit()) return;
-
-            StackValue.genNonNullAssertForLateinit(v, descriptor.getName().asString());
         }
 
         @Override

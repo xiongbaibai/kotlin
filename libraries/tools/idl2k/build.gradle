@@ -20,6 +20,8 @@ dependencies {
     implementation "org.antlr:antlr4-runtime:$antlr4_version"
     implementation project(':kotlin-stdlib')
     implementation "org.jsoup:jsoup:1.8.2"
+
+    testImplementation "junit:junit:4.12"
 }
 
 sourceSets.main.kotlin.srcDirs += file("$buildDir/generated-src/antlr/main/")
@@ -32,7 +34,7 @@ generateGrammarSource {
 compileKotlin.dependsOn generateGrammarSource
 compileTestKotlin.dependsOn generateTestGrammarSource
 
-task downloadAllIdls(type: JavaExec) {
+task downloadIDL(type: JavaExec) {
     main = "org.jetbrains.idl2k.dl.DownloadKt"
     classpath = sourceSets.main.runtimeClasspath
 }

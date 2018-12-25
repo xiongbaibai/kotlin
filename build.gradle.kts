@@ -1,13 +1,9 @@
 
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-import org.gradle.api.Project
-import java.util.*
-import java.io.File
-import org.gradle.api.tasks.bundling.Jar
 import org.gradle.plugins.ide.idea.model.IdeaModel
+import org.gradle.api.file.FileCollection
 import org.jetbrains.kotlin.gradle.tasks.AbstractKotlinCompile
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.jetbrains.kotlin.gradle.tasks.Kotlin2JsCompile
 import proguard.gradle.ProGuardTask
 
 buildscript {
@@ -148,7 +144,9 @@ fun checkJDK() {
 rootProject.apply {
     from(rootProject.file("versions.gradle.kts"))
     from(rootProject.file("report.gradle.kts"))
+    from(rootProject.file("javaInstrumentation.gradle.kts"))
 }
+
 IdeVersionConfigurator.setCurrentIde(this)
 
 extra["versions.protobuf-java"] = "2.6.1"
@@ -210,6 +208,7 @@ extra["compilerModules"] = arrayOf(
             emptyArray()
         },
         ":compiler:frontend",
+        ":compiler:frontend.common",
         ":compiler:frontend.java",
         ":compiler:frontend.script",
         ":compiler:cli-common",
@@ -245,8 +244,6 @@ val coreLibProjects = listOf(
         ":kotlin-stdlib",
         ":kotlin-stdlib-common",
         ":kotlin-stdlib-js",
-        ":kotlin-stdlib-jre7",
-        ":kotlin-stdlib-jre8",
         ":kotlin-stdlib-jdk7",
         ":kotlin-stdlib-jdk8",
         ":kotlin-test:kotlin-test-common",
@@ -452,8 +449,16 @@ tasks {
         }
     }
 
+    listOf("clean", "assemble", "install", "dist").forEach { taskName ->
+        create("coreLibs${taskName.capitalize()}") {
+            coreLibProjects.forEach { projectName -> dependsOn("$projectName:$taskName") }
+        }
+    }
+
     create("coreLibsTest") {
         (coreLibProjects + listOf(
+                ":kotlin-stdlib-jre7",
+                ":kotlin-stdlib-jre8",
                 ":kotlin-stdlib:samples",
                 ":kotlin-test:kotlin-test-js:kotlin-test-js-it",
                 ":kotlinx-metadata-jvm",
@@ -479,6 +484,7 @@ tasks {
                   ":compiler:container:test",
                   ":compiler:tests-java8:test",
                   ":compiler:tests-spec:remoteRunTests")
+        dependsOn(":plugins:jvm-abi-gen:test")
     }
 
     create("jsCompilerTest") {

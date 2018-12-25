@@ -1651,6 +1651,11 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 runTest("compiler/testData/diagnostics/tests/callableReference/emptyLhs.kt");
             }
 
+            @TestMetadata("expectedTypeAsSubtypeOfFunctionType.kt")
+            public void testExpectedTypeAsSubtypeOfFunctionType() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/callableReference/expectedTypeAsSubtypeOfFunctionType.kt");
+            }
+
             @TestMetadata("kt15439_completeCall.kt")
             public void testKt15439_completeCall() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/callableReference/kt15439_completeCall.kt");
@@ -5133,6 +5138,16 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
                 runTest("compiler/testData/diagnostics/tests/declarationChecks/LocalVariableWithNoTypeInformation.kt");
             }
 
+            @TestMetadata("localVariablesWithTypeParameters_1_3.kt")
+            public void testLocalVariablesWithTypeParameters_1_3() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/declarationChecks/localVariablesWithTypeParameters_1_3.kt");
+            }
+
+            @TestMetadata("localVariablesWithTypeParameters_1_4.kt")
+            public void testLocalVariablesWithTypeParameters_1_4() throws Exception {
+                runTest("compiler/testData/diagnostics/tests/declarationChecks/localVariablesWithTypeParameters_1_4.kt");
+            }
+
             @TestMetadata("mulitpleVarargParameters.kt")
             public void testMulitpleVarargParameters() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/declarationChecks/mulitpleVarargParameters.kt");
@@ -7946,11 +7961,6 @@ public class DiagnosticsTestGenerated extends AbstractDiagnosticsTest {
             @TestMetadata("argumentsForT.kt")
             public void testArgumentsForT() throws Exception {
                 runTest("compiler/testData/diagnostics/tests/generics/argumentsForT.kt");
-            }
-
-            @TestMetadata("capturingOfDeepNestedType.kt")
-            public void testCapturingOfDeepNestedType() throws Exception {
-                runTest("compiler/testData/diagnostics/tests/generics/capturingOfDeepNestedType.kt");
             }
 
             @TestMetadata("commonSupertypeContravariant.kt")

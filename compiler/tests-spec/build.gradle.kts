@@ -29,7 +29,9 @@ val remoteRunTests by task<Test> {
     val includeTests = setOf(
         "checkers.DiagnosticsTestSpecGenerated\$NotLinked\$Contracts*",
         "checkers.DiagnosticsTestSpecGenerated\$NotLinked\$Annotations*",
-        "codegen.BlackBoxCodegenTestSpecGenerated\$NotLinked\$Annotations*"
+        "checkers.DiagnosticsTestSpecGenerated\$NotLinked\$Local_variables\$Type_parameters*",
+        "codegen.BlackBoxCodegenTestSpecGenerated\$NotLinked\$Annotations\$Type_annotations*",
+        "codegen.BlackBoxCodegenTestSpecGenerated\$NotLinked\$Objects\$Inheritance*"
     )
 
     workingDir = rootDir

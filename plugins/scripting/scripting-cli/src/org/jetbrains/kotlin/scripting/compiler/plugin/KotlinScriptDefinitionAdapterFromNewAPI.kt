@@ -25,9 +25,9 @@ import kotlin.script.experimental.util.getOrError
 // temporary trick with passing Any as a template and overwriting it below, TODO: fix after introducing new script definitions hierarchy
 abstract class KotlinScriptDefinitionAdapterFromNewAPIBase : KotlinScriptDefinition(Any::class) {
 
-    protected abstract val scriptCompilationConfiguration: ScriptCompilationConfiguration
+    abstract val scriptCompilationConfiguration: ScriptCompilationConfiguration
 
-    protected abstract val hostConfiguration: ScriptingHostConfiguration
+    abstract val hostConfiguration: ScriptingHostConfiguration
 
     open val baseClass: KClass<*> by lazy(LazyThreadSafetyMode.PUBLICATION) {
         getScriptingClass(scriptCompilationConfiguration.getOrError(ScriptCompilationConfiguration.baseClass))
@@ -67,7 +67,7 @@ abstract class KotlinScriptDefinitionAdapterFromNewAPIBase : KotlinScriptDefinit
             .map { getScriptingClass(it).starProjectedType }
     }
 
-    override val environmentVariables: List<Pair<String, KType>> by lazy(LazyThreadSafetyMode.PUBLICATION) {
+    override val providedProperties: List<Pair<String, KType>> by lazy(LazyThreadSafetyMode.PUBLICATION) {
         scriptCompilationConfiguration[ScriptCompilationConfiguration.providedProperties]
             ?.map { (k, v) -> k to getScriptingClass(v).starProjectedType }.orEmpty()
     }

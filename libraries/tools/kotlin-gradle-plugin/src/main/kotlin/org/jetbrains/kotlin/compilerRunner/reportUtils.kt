@@ -36,7 +36,7 @@ internal fun loadCompilerVersion(compilerClasspath: List<File>): String {
     var result: String? = null
 
     fun checkVersion(bytes: ByteArray) {
-        ClassReader(bytes).accept(object : ClassVisitor(Opcodes.ASM5) {
+        ClassReader(bytes).accept(object : ClassVisitor(Opcodes.API_VERSION) {
             override fun visitField(access: Int, name: String, desc: String, signature: String?, value: Any?): FieldVisitor {
                 if (name == KotlinCompilerVersion::VERSION.name && value is String) {
                     result = value
@@ -71,12 +71,12 @@ internal fun runToolInSeparateProcess(
     argsArray: Array<String>,
     compilerClassName: String,
     classpath: List<File>,
-    logger: KotlinLogger,
-    messageCollector: MessageCollector
+    logger: KotlinLogger
 ): ExitCode {
     val javaBin = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java"
     val classpathString = classpath.map { it.absolutePath }.joinToString(separator = File.pathSeparator)
     val builder = ProcessBuilder(javaBin, "-cp", classpathString, compilerClassName, *argsArray)
+    val messageCollector = createLoggingMessageCollector(logger)
     val process = launchProcessWithFallback(builder, DaemonReportingTargets(messageCollector = messageCollector))
 
     // important to read inputStream, otherwise the process may hang on some systems
@@ -95,7 +95,7 @@ internal fun runToolInSeparateProcess(
     return exitCodeFromProcessExitCode(logger, exitCode)
 }
 
-internal fun createLoggingMessageCollector(log: KotlinLogger): MessageCollector = object : MessageCollector {
+private fun createLoggingMessageCollector(log: KotlinLogger): MessageCollector = object : MessageCollector {
     private var hasErrors = false
     private val messageRenderer = MessageRenderer.PLAIN_FULL_PATHS
 

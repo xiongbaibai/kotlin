@@ -435,6 +435,11 @@ public class AsmUtil {
         return InlineUtil.isInlineOrContainingInline(descriptor.getContainingDeclaration()) ? ACC_PUBLIC : NO_FLAG_PACKAGE_PRIVATE;
     }
 
+    public static int getSyntheticAccessFlagForLambdaClass(@NotNull ClassDescriptor descriptor) {
+        return descriptor instanceof SyntheticClassDescriptorForLambda &&
+               ((SyntheticClassDescriptorForLambda) descriptor).isCallableReference() ? ACC_SYNTHETIC : 0;
+    }
+
     public static int calculateInnerClassAccessFlags(@NotNull ClassDescriptor innerClass) {
         int visibility =
                 innerClass instanceof SyntheticClassDescriptorForLambda
@@ -443,6 +448,7 @@ public class AsmUtil {
                   ? ACC_PUBLIC
                   : getVisibilityAccessFlag(innerClass);
         return visibility |
+               getSyntheticAccessFlagForLambdaClass(innerClass) |
                innerAccessFlagsForModalityAndKind(innerClass) |
                (innerClass.isInner() ? 0 : ACC_STATIC);
     }
@@ -629,7 +635,6 @@ public class AsmUtil {
     }
 
     public static void genClosureFields(List<Pair<String, Type>> allFields, ClassBuilder builder) {
-        //noinspection PointlessBitwiseExpression
         int access = NO_FLAG_PACKAGE_PRIVATE | ACC_SYNTHETIC | ACC_FINAL;
         for (Pair<String, Type> field : allFields) {
             builder.newField(JvmDeclarationOrigin.NO_ORIGIN, access, field.first, field.second.getDescriptor(), null, null);
@@ -1217,8 +1222,16 @@ public class AsmUtil {
         return JvmClassName.byFqNameWithoutInnerClasses(fqName).getInternalName();
     }
 
-    public static void putJavaLangClassInstance(@NotNull InstructionAdapter v, @NotNull Type type) {
-        if (isPrimitive(type)) {
+    public static void putJavaLangClassInstance(
+            @NotNull InstructionAdapter v,
+            @NotNull Type type,
+            @Nullable KotlinType kotlinType,
+            @NotNull GenerationState state
+    ) {
+        if (kotlinType != null && InlineClassesUtilsKt.isInlineClassType(kotlinType)) {
+            v.aconst(boxType(type, kotlinType, state));
+        }
+        else if (isPrimitive(type)) {
             v.getstatic(boxType(type).getInternalName(), "TYPE", "Ljava/lang/Class;");
         }
         else {

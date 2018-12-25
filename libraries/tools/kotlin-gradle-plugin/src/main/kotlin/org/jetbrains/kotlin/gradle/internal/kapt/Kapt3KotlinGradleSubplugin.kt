@@ -89,6 +89,7 @@ class Kapt3KotlinGradleSubplugin : KotlinGradleSubplugin<KotlinCompile> {
         private val VERBOSE_OPTION_NAME = "kapt.verbose"
         private val USE_WORKER_API = "kapt.use.worker.api"
         private val INFO_AS_WARNINGS = "kapt.info.as.warnings"
+        private val INCLUDE_COMPILE_CLASSPATH = "kapt.include.compile.classpath"
 
         const val KAPT_WORKER_DEPENDENCIES_CONFIGURATION_NAME = "kotlinKaptWorkerDependencies"
 
@@ -121,6 +122,9 @@ class Kapt3KotlinGradleSubplugin : KotlinGradleSubplugin<KotlinCompile> {
         fun Project.isInfoAsWarnings(): Boolean {
             return hasProperty(INFO_AS_WARNINGS) && property(INFO_AS_WARNINGS) == "true"
         }
+
+        fun includeCompileClasspath(project: Project): Boolean? =
+            project.findProperty(INCLUDE_COMPILE_CLASSPATH)?.run { toString().toBoolean() }
 
         fun findMainKaptConfiguration(project: Project) = project.findKaptConfiguration(SourceSet.MAIN_SOURCE_SET_NAME)
 
@@ -172,6 +176,10 @@ class Kapt3KotlinGradleSubplugin : KotlinGradleSubplugin<KotlinCompile> {
         val sourcesOutputDir = getKaptGeneratedSourcesDir(project, sourceSetName)
         val kotlinSourcesOutputDir = getKaptGeneratedKotlinSourcesDir(project, sourceSetName)
         val classesOutputDir = getKaptGeneratedClassesDir(project, sourceSetName)
+        val includeCompileClasspath =
+            kaptExtension.includeCompileClasspath
+                ?: Kapt3KotlinGradleSubplugin.includeCompileClasspath(project)
+                ?: true
     }
 
     override fun apply(
@@ -265,6 +273,8 @@ class Kapt3KotlinGradleSubplugin : KotlinGradleSubplugin<KotlinCompile> {
         pluginOptions += CompositeSubpluginOption("apoptions", lazy { encodeList(apOptions.associate { it.key to it.value }) }, apOptions)
 
         pluginOptions += SubpluginOption("javacArguments", encodeList(kaptExtension.getJavacOptions()))
+
+        pluginOptions += SubpluginOption("includeCompileClasspath", includeCompileClasspath.toString())
 
         addMiscOptions(pluginOptions)
 
@@ -365,6 +375,7 @@ class Kapt3KotlinGradleSubplugin : KotlinGradleSubplugin<KotlinCompile> {
         kaptTask.destinationDir = sourcesOutputDir
         kaptTask.kotlinSourcesDestinationDir = kotlinSourcesOutputDir
         kaptTask.classesDir = classesOutputDir
+        kaptTask.includeCompileClasspath = includeCompileClasspath
 
         kotlinCompilation?.run {
             output.apply {

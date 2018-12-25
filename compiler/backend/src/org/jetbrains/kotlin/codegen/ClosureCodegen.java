@@ -142,13 +142,14 @@ public class ClosureCodegen extends MemberCodegen<KtElement> {
             sw.writeInterfaceEnd();
         }
 
-        v.defineClass(element,
-                      state.getClassFileVersion(),
-                      ACC_FINAL | ACC_SUPER | visibilityFlag,
-                      asmType.getInternalName(),
-                      sw.makeJavaGenericSignature(),
-                      superClassAsmType.getInternalName(),
-                      superInterfaceAsmTypes
+        v.defineClass(
+                element,
+                state.getClassFileVersion(),
+                ACC_FINAL | ACC_SUPER | visibilityFlag | getSyntheticAccessFlagForLambdaClass(classDescriptor),
+                asmType.getInternalName(),
+                sw.makeJavaGenericSignature(),
+                superClassAsmType.getInternalName(),
+                superInterfaceAsmTypes
         );
 
         initDefaultSourceMappingIfNeeded(context, this, state);
@@ -245,7 +246,9 @@ public class ClosureCodegen extends MemberCodegen<KtElement> {
         DescriptorSerializer serializer =
                 DescriptorSerializer.createForLambda(new JvmSerializerExtension(v.getSerializationBindings(), state));
 
-        ProtoBuf.Function functionProto = serializer.functionProto(freeLambdaDescriptor).build();
+        ProtoBuf.Function.Builder builder = serializer.functionProto(freeLambdaDescriptor);
+        if (builder == null) return;
+        ProtoBuf.Function functionProto = builder.build();
 
         WriteAnnotationUtilKt.writeKotlinMetadata(v, state, KotlinClassHeader.Kind.SYNTHETIC_CLASS, 0, av -> {
             writeAnnotationData(av, serializer, functionProto);
@@ -400,7 +403,9 @@ public class ClosureCodegen extends MemberCodegen<KtElement> {
 
         if (container instanceof ClassDescriptor) {
             // TODO: would it work for arrays?
-            putJavaLangClassInstance(iv, state.getTypeMapper().mapClass((ClassDescriptor) container));
+            SimpleType containerKotlinType = ((ClassDescriptor) container).getDefaultType();
+            Type containerType = state.getTypeMapper().mapClass((ClassDescriptor) container);
+            putJavaLangClassInstance(iv, containerType, containerKotlinType, state);
         }
         else if (container instanceof PackageFragmentDescriptor) {
             iv.aconst(state.getTypeMapper().mapOwner(descriptor));
