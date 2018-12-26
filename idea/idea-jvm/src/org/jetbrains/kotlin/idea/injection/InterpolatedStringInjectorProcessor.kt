@@ -18,7 +18,6 @@ package org.jetbrains.kotlin.idea.injection
 
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.util.Trinity
-import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiLanguageInjectionHost
 import org.intellij.plugins.intelliLang.inject.InjectedLanguage
 import org.intellij.plugins.intelliLang.inject.InjectorUtils
@@ -48,13 +47,7 @@ fun splitLiteralToInjectionParts(injection: BaseInjection, literal: KtStringTemp
         result.add(Trinity.create(literal, injectedLanguage, range))
     }
 
-    fun suffix(i: Int): String {
-        return if (i == len - 1) {
-            injection.suffix
-        } else {
-            ""
-        }
-    }
+    fun suffix(i: Int) = if (i == len - 1) injection.suffix else ""
 
     var unparsable = false
 
@@ -67,18 +60,10 @@ fun splitLiteralToInjectionParts(injection: BaseInjection, literal: KtStringTemp
 
         when (child) {
             is KtLiteralStringTemplateEntry, is KtEscapeStringTemplateEntry -> {
-                // Merge all string literals into one part
-                while (true) {
-                    val nextChild = children.getOrNull(i + 1)
-                    if (nextChild is KtLiteralStringTemplateEntry || nextChild is KtEscapeStringTemplateEntry) {
-                        i++
-                    } else {
-                        break
-                    }
-                }
+                // Merge all consecutive string literals into one part
+                i += children.countFrom(i + 1) { it is KtLiteralStringTemplateEntry || it is KtEscapeStringTemplateEntry}
 
                 val lastInPart = children[i]
-
                 addInjectionRange(
                     TextRange.create(partOffsetInParent, lastInPart.startOffsetInParent + lastInPart.textLength),
                     prefix,
@@ -119,10 +104,9 @@ fun splitLiteralToInjectionParts(injection: BaseInjection, literal: KtStringTemp
             }
 
             else -> {
-                unparsable = true
-
                 addInjectionRange(TextRange.create(partOffsetInParent, child.startOffsetInParent + child.textLength), prefix, suffix(i))
 
+                unparsable = true
                 prefix = ""
             }
         }
@@ -142,3 +126,15 @@ private fun tryEvaluateConstant(ktExpression: KtExpression?) =
     }
 
 private val NO_VALUE_NAME = "missingValue"
+
+private inline fun <T: Any> List<T>.countFrom(from: Int, predicate: (T) -> Boolean): Int {
+    var i = from
+    while (i < size) {
+        if (!predicate(get(i))) {
+            break
+        }
+        i++
+    }
+
+    return i - from
+}
