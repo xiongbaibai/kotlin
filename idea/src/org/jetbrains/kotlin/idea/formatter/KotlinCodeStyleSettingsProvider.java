@@ -62,7 +62,7 @@ public class KotlinCodeStyleSettingsProvider extends CodeStyleSettingsProviderCo
                         addTab(new ImportSettingsPanelWrapper(settings));
 
                         //noinspection IncompatibleAPI
-                        for (CodeStyleSettingsProvider provider : CodeStyleSettingsProvider.EXTENSION_POINT_NAME.getExtensionList()) {
+                        for (CodeStyleSettingsProvider provider : CodeStyleSettingsProvider.EXTENSION_POINT_NAME.getExtensions()) {
                             if (provider.getLanguage() == KotlinLanguage.INSTANCE && !provider.hasSettingsPage()) {
                                 createTab(provider);
                             }
