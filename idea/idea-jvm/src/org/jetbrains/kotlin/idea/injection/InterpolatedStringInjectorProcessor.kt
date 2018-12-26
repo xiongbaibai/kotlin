@@ -58,57 +58,50 @@ fun splitLiteralToInjectionParts(injection: BaseInjection, literal: KtStringTemp
         val child = children[i]
         val partOffsetInParent = child.startOffsetInParent
 
-        when (child) {
-            is KtLiteralStringTemplateEntry, is KtEscapeStringTemplateEntry -> {
+        if (child is KtSimpleNameStringTemplateEntry || child is KtBlockStringTemplateEntry) {
+            if (!prefix.isEmpty() || i == 0) {
+                // Store part with prefix before replacing it
+                addInjectionRange(TextRange.from(partOffsetInParent, 0), prefix, suffix(i))
+            }
+
+            prefix = when (child) {
+                is KtSimpleNameStringTemplateEntry -> {
+                    tryEvaluateConstant(child.expression) ?: run {
+                        unparsable = true
+                        child.expression?.text ?: NO_VALUE_NAME
+                    }
+                }
+                is KtBlockStringTemplateEntry -> {
+                    tryEvaluateConstant(child.expression) ?: run {
+                        unparsable = true
+                        NO_VALUE_NAME
+                    }
+                }
+                else -> {
+                    error("Child type should be KtSimpleNameStringTemplateEntry or KtBlockStringTemplateEntry")
+                }
+            }
+
+            if (i == len - 1 && !prefix.isEmpty()) {
+                // There won't be more elements, so create part with prefix right away
+                addInjectionRange(TextRange.from(partOffsetInParent + child.textLength, 0), prefix, suffix(i))
+            }
+        } else {
+            if (child is KtLiteralStringTemplateEntry || child is KtEscapeStringTemplateEntry) {
                 // Merge all consecutive string literals into one part
-                i += children.countFrom(i + 1) { it is KtLiteralStringTemplateEntry || it is KtEscapeStringTemplateEntry}
-
-                val lastInPart = children[i]
-                addInjectionRange(
-                    TextRange.create(partOffsetInParent, lastInPart.startOffsetInParent + lastInPart.textLength),
-                    prefix,
-                    suffix(i)
-                )
-
-                prefix = ""
-            }
-
-            is KtSimpleNameStringTemplateEntry, is KtBlockStringTemplateEntry -> {
-                if (!prefix.isEmpty() || i == 0) {
-                    // Store part with prefix before replacing it
-                    addInjectionRange(TextRange.from(partOffsetInParent, 0), prefix, suffix(i))
-                }
-
-                prefix = when (child) {
-                    is KtSimpleNameStringTemplateEntry -> {
-                        tryEvaluateConstant(child.expression) ?: run {
-                            unparsable = true
-                            child.expression?.text ?: NO_VALUE_NAME
-                        }
-                    }
-                    is KtBlockStringTemplateEntry -> {
-                        tryEvaluateConstant(child.expression) ?: run {
-                            unparsable = true
-                            NO_VALUE_NAME
-                        }
-                    }
-                    else -> {
-                        error("Child type should be KtSimpleNameStringTemplateEntry or KtBlockStringTemplateEntry")
-                    }
-                }
-
-                if (i == len - 1 && !prefix.isEmpty()) {
-                    // There won't be more elements, so create part with prefix right away
-                    addInjectionRange(TextRange.from(partOffsetInParent + child.textLength, 0), prefix, suffix(i))
-                }
-            }
-
-            else -> {
-                addInjectionRange(TextRange.create(partOffsetInParent, child.startOffsetInParent + child.textLength), prefix, suffix(i))
-
+                i += children.countFrom(i + 1) { it is KtLiteralStringTemplateEntry || it is KtEscapeStringTemplateEntry }
+            } else {
                 unparsable = true
-                prefix = ""
             }
+
+            val lastInPart = children[i]
+            addInjectionRange(
+                TextRange.create(partOffsetInParent, lastInPart.startOffsetInParent + lastInPart.textLength),
+                prefix,
+                suffix(i)
+            )
+
+            prefix = ""
         }
 
         i++
