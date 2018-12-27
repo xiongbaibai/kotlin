@@ -17,7 +17,7 @@ val shrink =
     findProperty("kotlin.build.proguard")?.toString()?.toBoolean()
     ?: hasProperty("teamcity")
 
-val compilerManifestClassPath = "kotlin-stdlib.jar kotlin-reflect.jar kotlin-script-runtime.jar"
+val compilerManifestClassPath = "kotlin-stdlib.jar kotlin-reflect.jar kotlin-script-runtime.jar trove4j.jar"
 
 val fatJarContents by configurations.creating
 
