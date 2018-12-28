@@ -24,12 +24,17 @@ import org.jetbrains.kotlin.checkers.diagnostics.ActualDiagnostic;
 import org.jetbrains.kotlin.checkers.diagnostics.TextDiagnostic;
 import org.jetbrains.kotlin.checkers.utils.CheckerTestUtil;
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment;
+import org.jetbrains.kotlin.config.LanguageVersionSettingsImpl;
+import org.jetbrains.kotlin.descriptors.impl.ModuleDescriptorImpl;
 import org.jetbrains.kotlin.psi.KtFile;
 import org.jetbrains.kotlin.resolve.BindingContext;
+import org.jetbrains.kotlin.resolve.calls.smartcasts.DataFlowValueFactory;
 import org.jetbrains.kotlin.resolve.lazy.JvmResolveUtil;
 import org.jetbrains.kotlin.test.ConfigurationKind;
 import org.jetbrains.kotlin.test.KotlinTestUtils;
 import org.jetbrains.kotlin.test.KotlinTestWithEnvironment;
+import org.jetbrains.kotlin.tests.di.ContainerForTests;
+import org.jetbrains.kotlin.tests.di.InjectionKt;
 
 import java.io.File;
 import java.util.List;
@@ -145,16 +150,22 @@ public class CheckerTestUtilTest extends KotlinTestWithEnvironment {
             BindingContext bindingContext =
                     JvmResolveUtil.analyze((KtFile) psiFile, environment).getBindingContext();
 
+            ModuleDescriptorImpl emptyModule = KotlinTestUtils.createEmptyModule();
+            ContainerForTests container = InjectionKt.createContainerForTests(environment.getProject(), emptyModule);
+            DataFlowValueFactory dataFlowValueFactory = container.getDataFlowValueFactory();
+
             String expectedText = CheckerTestUtil.INSTANCE.addDiagnosticMarkersToText(
                     psiFile,
-                    CheckerTestUtil.INSTANCE.getDiagnosticsIncludingSyntaxErrors(bindingContext, psiFile, false, null, null, false)
+                    CheckerTestUtil.INSTANCE.getDiagnosticsIncludingSyntaxErrors(bindingContext, psiFile, false, null, null, false,
+                                                                                 LanguageVersionSettingsImpl.DEFAULT, dataFlowValueFactory, null)
             ).toString();
 
             List<DiagnosedRange> diagnosedRanges = Lists.newArrayList();
             CheckerTestUtil.INSTANCE.parseDiagnosedRanges(expectedText, diagnosedRanges);
 
             List<ActualDiagnostic> actualDiagnostics =
-                    CheckerTestUtil.INSTANCE.getDiagnosticsIncludingSyntaxErrors(bindingContext, psiFile, false, null, null, false);
+                    CheckerTestUtil.INSTANCE.getDiagnosticsIncludingSyntaxErrors(bindingContext, psiFile, false, null, null, false,
+                                                                                 LanguageVersionSettingsImpl.DEFAULT, dataFlowValueFactory, null);
             makeTestData(actualDiagnostics, diagnosedRanges);
 
             List<String> expectedMessages = Lists.newArrayList(expected);
